@@ -53,7 +53,35 @@ do {
             continue;
         }
     }
-
+    
+    //ÜBERPRÜFEN OB DER CLIENT ETWAS SENDET
+    /*
+     * jsonDATA
+     * {
+     *      "request" => "getState"
+     *      "gameID" => "GAMEID"
+     * }
+     *
+     */
+    $readed = socket_read($server->getSocket(), "\n", PHP_NORMAL_READ);
+    if($readed != "") {
+        $readed = json_decode($readed);
+       //Bei getState abfrage wird der State zurück gegeben
+        if($readed["request"] == "getState" || $readed["gameID"] != null) {
+            foreach ($games as $key => $game) {
+                if ($game["Game"] == $readed["gameID"]) {
+                    
+                    $stateMsg = array(
+                        "Game" => $game["Game"],
+                        "State" => json_encode($game["State"])
+                    );
+                    socket_write($game["O"], json_encode($stateMsg), strlen(json_encode($stateMsg)));
+                    socket_write($game["X"], json_encode($stateMsg), strlen(json_encode($stateMsg)));
+                }
+            }
+        }
+    }
+    
     // BEI GENUG SPIELERN EIN SPIEL ERSTELLEN
     if ((sizeof($server->getConnectedSockets()) - (sizeof($games) * 2)) >= 2) {
         $currgame = $g->createGame();
@@ -112,4 +140,9 @@ function isAlreadyInGame($socket, $games)
         $isInGame,
         $ConnectedGame
     ];
+}
+
+function startsWith( $haystack, $needle ) {
+    $length = strlen( $needle );
+    return substr( $haystack, 0, $length ) === $needle;
 }
